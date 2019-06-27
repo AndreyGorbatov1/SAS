@@ -1,0 +1,135 @@
+*/1.	Из таблицы CLASS (SASHELP) получить все данные кроме пола для самых старших ребят (без использования вложенных запросов). ;
+proc sql;
+create table t1 as 
+select Name, Age, Height, Weight
+from sashelp.class
+having Age = max(Age)
+;
+
+
+*2.	Посчитать процент мальчиков среди всех детей выше среднего роста (использовать минимально возможное число вложенных запросов).;
+
+proc sql;
+
+create table t2 as
+select (sum(my1)/sum(my2))*100
+from(
+	select Name, Sex , count(Sex), case when Sex='M' then 1 end as my1, case when Sex then 1 end as my2
+	from sashelp.class
+	having Height > avg(Height)
+)
+;
+
+*3.	Оставить в таблице данные только по самым высоким детям для каждого возраста.;
+
+proc sql;
+
+create table t2 as
+select *
+from sashelp.class
+group by Age
+Having Height = max(Height)
+;
+
+*4.	На основе таблицы STOCKS (SASHELP)  сделать таблицу с итогами продаж (цена открытия на объём) по кварталам независимо от года для любого актива. 
+Столбцы: Q1, Q2, Q3, Q4. Показатели: Сумма, Число данных наблюдений, Среднее значение, Максимум, Минимум.;
+
+libname fld 'your_path';
+
+data fld.QResults(keep=Otherdate Open volume );
+  set sashelp.Stocks;
+  Otherdate=month(Date);
+run;*/
+;
+
+proc sql;
+create table t2 as
+	select Otherdate, sum(volume*open) as results
+	from fld.QResults
+	group by Otherdate
+	order by Otherdate
+;
+
+proc transpose data=t2
+               out=t2_transposed;
+run;
+
+proc sql;
+create table t3 as
+select col1+col2+col3 as Q1,
+		col4+col5+col6 as Q2,
+		col7+col8+col9 as Q3,
+		col10+col11+col12 as Q4,
+		col1+col2+col3+col4+col5+col6+col7+col8+col9+col10+col11+col12 as Summa,
+		min(col1+col2+col3, col4+col5+col6, col7+col8+col9, col10+col11+col12) as MIN_,
+		max(col1+col2+col3, col4+col5+col6, col7+col8+col9, col10+col11+col12) as MAX_,
+		mean(col1+col2+col3, col4+col5+col6, col7+col8+col9, col10+col11+col12) as AVG_
+	from t2_transposed
+	where _NAME_ = 'results'
+;
+
+
+*5.	Создать текстовой столбец Date2, повторяющий поле Date. Создать столбец Date3 на основе Date2 в формате даты, вида DD-MM-YYYY. ;
+
+data fld.QResults(keep= Date Date2 Date3);
+  set sashelp.Stocks;
+  Date2=PUT(Date, date8.);
+  Date3=INPUT(Date2, date9.);
+  format Date3 ddmmyyd10.;
+;
+run;
+
+
+*6.	Создать таблицу Variable с единственным полем X, содержащим натуральные числа от 1 до 10. ;
+
+data Variable;
+do X = 1 to 10;
+   output;
+end;
+;
+run;
+
+*7.	Написать функцию, которая вычисляет факториал числа. С помощью PROC SQL создать представление на основе таблицы Variable, которое выдает значение поля X и его факториал. 
+Аналогичное задание сделать с использованием встроенной функции факториала. ;
+
+proc fcmp outlib=work.fun1.fun1;
+
+function myfactor(x);
+	if (x=1) then return (1);
+	else if (x=0) then return (1);
+	else return (x*myfactor(x-1));
+endsub;
+quit; 
+
+options cmplib=work.fun1;
+
+proc sql;
+create table test_fac as 
+select *, myfactor(X), fact(X)
+from Variable
+;
+
+
+*8.	Получить информацию о названиях полей и формате для таблицы DEMOGRAPHICS (SASHELP). 
+Выполнить задание тремя способами: загрузить данные в Excel через интерфейс, просмотреть данные в формате отчета, создать таблицу на основе полученных данных. ;
+
+data t4;
+set sashelp.demographics;
+run;
+
+proc contents data=sashelp.demographics FMTLEN;
+run;
+
+
+*proc means data=t3;
+
+*proc summary data=t3;
+
+proc sql;
+describe table sashelp.demographics;
+quit;
+
+ods select Variables;
+proc contents data=sashelp.demographics;
+run;
+ods select default;
