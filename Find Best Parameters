@@ -1,0 +1,87 @@
+data var_list; /*список переменных*/
+length variable $50;
+input variable $ ;
+Datalines; 
+
+*params
+inl_amt_sum
+interest_rate
+term_calc
+
+
+
+;
+run;
+
+
+data results;
+     length variable $50;
+     input variable $ rank min max cnt spd_amt;
+     Datalines; 
+run;
+
+
+
+%macro sth(num);
+
+
+data line; 
+    do i = &num; 
+     set var_list point = i; 
+     output; 
+    end; 
+    stop; 
+run; 
+
+Proc sql;
+     select variable into: var
+     from line
+;quit;
+
+proc sql;
+create table support as 
+     select 
+      &var
+     ,spd_amt
+     ,inl_amt_sum
+     from params
+;quit;
+
+proc rank data=support groups=10 out=&var;
+     var &var;
+     ranks rank;
+run;
+
+     proc sql;
+          create table &var as
+          select 
+                      "&var" as variable
+                     ,rank
+                     ,min(&var) as min
+                     ,max(&var) as max
+                     ,count(*)  as count
+                     ,round(sum(s_amt)/sum(inl_amt),.001) as s_amt
+          from &var
+          group by 1,2
+     ;quit;
+
+     Proc sql;
+          create table results
+          as 
+          select * from results
+          union
+          select * from &var
+          order by variable
+          ;
+     drop table &var;
+     ;quit;
+
+%mend;
+%sth(1);
+%sth(2);
+%sth(3);
+
+
+
+
+
