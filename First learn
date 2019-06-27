@@ -1,0 +1,25 @@
+libname fld 'your_path'; 
+
+data fld.myBUY (compress=binary keep=ID DATE AMOUNT MyMonth Otherdate);
+  set sashelp.BUY;
+  ID=_N_;
+  MyMonth=UPCASE(PUT(date, monname3.)); 
+  Otherdate=PUT(date, mmddyy8.); 
+  %let y=16070;
+  format y ddmmyy.;
+  IF DATE  > y THEN AMOUNT=AMOUNT;
+  	ELSE AMOUNT=INT(AMOUNT/2);
+run;
+
+
+data imp_mybuy_sas_format_compresed ;
+	set "your_path\mybuy.sas7bdat" ;
+run;
+
+data imported_mybuy_sas_format ;
+	set "your_path\mybuy2.sas7bdat" ;
+run;
+
+PROC IMPORT OUT= WORK.CSVTABLE DATAFILE= "your_path\myBUY1.csv" 
+            DBMS=csv REPLACE;
+RUN;
